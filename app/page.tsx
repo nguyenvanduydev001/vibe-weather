@@ -343,7 +343,7 @@ export default function WeatherVibe() {
                 }}
                 disabled={validatingKey}
                 placeholder={t.placeholder}
-                className={`w-full rounded-xl bg-slate-800/50 px-4 py-3 pl-11 text-white border focus:outline-none focus:ring-1 transition-all font-mono text-sm sm:text-base ${
+                className={`w-full rounded-xl bg-slate-800/50 px-4 py-3 pl-11 text-white border focus:outline-none focus:ring-1 transition-all font-mono text-sm tracking-tight ${
                   keyError 
                     ? "border-red-500/50 focus:border-red-500 focus:ring-red-500" 
                     : "border-slate-700 focus:border-blue-500 focus:ring-blue-500"
