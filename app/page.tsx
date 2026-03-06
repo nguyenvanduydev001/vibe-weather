@@ -40,6 +40,8 @@ export default function WeatherVibe() {
   const [forecast, setForecast] = useState<ForecastItem[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [validatingKey, setValidatingKey] = useState<boolean>(false);
+  const [keyError, setKeyError] = useState<string | null>(null);
 
   const t = {
     en: {
@@ -51,7 +53,7 @@ export default function WeatherVibe() {
       step1: "Visit openweathermap.org and create a free account.",
       step2: "Go to 'My API Keys' in your profile menu.",
       step3: "Copy your 'Default' key or generate a new one named 'weather-vibe'.",
-      note: "New keys take 30-120 minutes to activate. If you see 'Invalid Key', please wait and try again later.",
+      note: "New keys take 30-120 minutes to activate, please wait and try again later.",
       invalidKey: "Invalid API Key. Please enter a valid OpenWeatherMap API Key.",
       fetchError: "Failed to fetch weather data. Please try again.",
       fetching: "Fetching atmosphere...",
@@ -72,7 +74,7 @@ export default function WeatherVibe() {
       step1: "Truy cập openweathermap.org và tạo tài khoản miễn phí.",
       step2: "Đi tới 'My API Keys' trong menu hồ sơ của bạn.",
       step3: "Sao chép mã 'Default' của bạn hoặc tạo một mã mới tên 'weather-vibe'.",
-      note: "Mã mới có thể mất từ 30-120 phút để kích hoạt. Nếu bạn thấy 'Invalid Key' (Mã không hợp lệ), vui lòng đợi và thử lại sau.",
+      note: "Mã mới có thể mất từ 30-120 phút để kích hoạt, vui lòng đợi và thử lại sau.",
       invalidKey: "Mã API không hợp lệ. Vui lòng nhập mã API OpenWeatherMap hợp lệ.",
       fetchError: "Không thể lấy dữ liệu thời tiết. Vui lòng thử lại.",
       fetching: "Đang tải bầu không khí...",
@@ -103,13 +105,34 @@ export default function WeatherVibe() {
     setLanguage(prev => prev === "en" ? "vi" : "en");
   };
 
-  const saveApiKey = (e: React.FormEvent) => {
+  const saveApiKey = async (e: React.FormEvent) => {
     e.preventDefault();
     const cleanedKey = inputKey.trim().toLowerCase();
-    if (cleanedKey) {
+    if (!cleanedKey) return;
+    
+    setValidatingKey(true);
+    setKeyError(null);
+    
+    try {
+      // Do a minimal test call to verify the key
+      await axios.get("https://api.openweathermap.org/data/2.5/weather", {
+        params: { lat: 51.5074, lon: -0.1278, appid: cleanedKey }, // test with London
+        timeout: 5000
+      });
+      
+      // If we reach here, the key is valid
       localStorage.setItem("openweathermap_api_key", cleanedKey);
       setApiKey(cleanedKey);
       setError(null);
+      setKeyError(null);
+    } catch (err: any) {
+      if (err.response?.status === 401) {
+        setKeyError(t.invalidKey + " " + t.note);
+      } else {
+        setKeyError("Network error while validating key. Please check your connection.");
+      }
+    } finally {
+      setValidatingKey(false);
     }
   };
 
@@ -314,18 +337,51 @@ export default function WeatherVibe() {
               <input
                 type="text"
                 value={inputKey}
-                onChange={(e) => setInputKey(e.target.value)}
+                onChange={(e) => {
+                  setInputKey(e.target.value);
+                  setKeyError(null);
+                }}
+                disabled={validatingKey}
                 placeholder={t.placeholder}
-                className="w-full rounded-xl bg-slate-800/50 px-4 py-3 pl-11 text-white border border-slate-700 focus:border-blue-500 focus:outline-none focus:ring-1 focus:ring-blue-500 transition-all font-mono text-sm sm:text-base"
+                className={`w-full rounded-xl bg-slate-800/50 px-4 py-3 pl-11 text-white border focus:outline-none focus:ring-1 transition-all font-mono text-sm sm:text-base ${
+                  keyError 
+                    ? "border-red-500/50 focus:border-red-500 focus:ring-red-500" 
+                    : "border-slate-700 focus:border-blue-500 focus:ring-blue-500"
+                }`}
                 required
               />
-              <KeyRound size={18} className="absolute left-4 top-3.5 text-slate-400" />
+              <KeyRound size={18} className={`absolute left-4 top-3.5 ${keyError ? "text-red-400" : "text-slate-400"}`} />
             </div>
+            
+            <AnimatePresence>
+              {keyError && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0, marginTop: 0 }}
+                  animate={{ opacity: 1, height: "auto", marginTop: 12 }}
+                  exit={{ opacity: 0, height: 0, marginTop: 0 }}
+                  className="overflow-hidden"
+                >
+                  <div className="rounded-lg bg-red-500/10 border border-red-500/20 p-3 text-xs text-red-200 flex gap-2 items-start">
+                    <AlertCircle size={14} className="mt-0.5 shrink-0" />
+                    <p>{keyError}</p>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+
             <button
               type="submit"
-              className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white shadow-lg shadow-blue-500/30 hover:bg-blue-500 hover:shadow-blue-500/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all active:scale-[0.98]"
+              disabled={validatingKey}
+              className="w-full rounded-xl bg-blue-600 py-3 font-semibold text-white shadow-lg shadow-blue-500/30 hover:bg-blue-500 hover:shadow-blue-500/40 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 focus:ring-offset-slate-900 transition-all active:scale-[0.98] disabled:opacity-70 disabled:pointer-events-none flex items-center justify-center gap-2"
             >
-              {t.save}
+              {validatingKey ? (
+                <>
+                  <Loader2 size={18} className="animate-spin" />
+                  Validating...
+                </>
+              ) : (
+                t.save
+              )}
             </button>
           </form>
         </motion.div>
