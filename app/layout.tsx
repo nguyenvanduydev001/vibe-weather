@@ -8,7 +8,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "VibeWeather | Bảng Theo Dõi Thời Tiết",
+  title: "Vibe Weather | Bảng Theo Dõi Thời Tiết",
   description: "Ứng dụng theo dõi thời tiết cục bộ với phong cách Glassmorphism, hỗ trợ đa ngôn ngữ và dữ liệu thời gian thực từ OpenWeatherMap.",
 };  
 
